@@ -21,14 +21,20 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Look for malicious php')
     parser.add_argument('FILE', nargs='+',
                             help='List of files or directories to be analyzed')
+    parser.add_argument('-s', '--suspicious', action='store_true',
+                help="Add rules for suspicious files (more FP)")
     args = parser.parse_args()
 
     # Compile rules
+    if args.suspicious:
+        YARA_FILES.append('yara/suspicious.yar')
+        YARA_FILES.append('yara/phpsuspicious.yar')
     rules = []
     for f in YARA_FILES:
         rules.append(yara.compile(
             os.path.join(os.path.dirname(os.path.realpath(__file__)), f)
         ))
+
 
     # Browse directories
     for target in args.FILE:

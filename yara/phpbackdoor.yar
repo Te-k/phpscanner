@@ -168,6 +168,27 @@ rule phpobfuscator {
         any of them
 }
 
+rule wso {
+    meta:
+        description = "WSO webshell"
+        url = "https://github.com/tennc/webshell/tree/master/php/wso"
+        author = "@tenacioustek"
+
+    strings:
+        $a = "63a9f0ea7bb98050796b649e85481845"
+        $b = "$default_action = 'FilesMan'"
+        $c = "function WSOstripslashes"
+        $d = "function WSOsetcookie"
+        $e = "WSO_VERSION"
+        $f = "<h1>Suicide</h1><div class=content>Really want to remove the shell?"
+        $g = "CREATE TABLE wso2(file text);"
+        $h = "21232f297a57a5a743894a0e4a801fc3"
+
+    condition:
+        any of them
+}
+
+
 rule koplak {
     meta:
         description = "koplak webshell"
@@ -184,6 +205,7 @@ rule koplak {
 rule webshell_functions {
     meta:
         description = "rules for basic webshell functions"
+        author = "@tenacioustek"
 
     strings:
         $a = "find / -type f -name .htpasswd"
@@ -193,6 +215,8 @@ rule webshell_functions {
         $e = "http://www.packetstormsecurity.org"
         $f = "which wget curl w3m lynx"
         $g = "sysctl -n kernel.osrelease"
+        $h = "ipconfig /all"
+        $i = "dir /s /w /b index.php"
 
     condition:
         any of them
@@ -211,36 +235,6 @@ private rule IRC
 
     condition:
         5 of them
-}
-
-private rule base64
-{
-    strings:
-        $eval = "ZXZhbCg"
-        $system = "c3lzdGVt"
-        $preg_replace = "cHJlZ19yZXBsYWNl"
-        $exec = "ZXhlYyg"
-        $base64_decode = "YmFzZTY0X2RlY29kZ"
-        $perl_shebang = "IyEvdXNyL2Jpbi9wZXJsCg"
-        $cmd_exe = "Y21kLmV4ZQ"
-        $powershell = "cG93ZXJzaGVsbC5leGU"
-
-    condition:
-        any of them
-}
-
-private rule hex
-{
-    strings:
-        $globals = "\\x47\\x4c\\x4f\\x42\\x41\\x4c\\x53" nocase
-        $eval = "\\x65\\x76\\x61\\x6C\\x28" nocase
-        $exec = "\\x65\\x78\\x65\\x63" nocase
-        $system = "\\x73\\x79\\x73\\x74\\x65\\x6d" nocase
-        $preg_replace = "\\x70\\x72\\x65\\x67\\x5f\\x72\\x65\\x70\\x6c\\x61\\x63\\x65" nocase
-        $http_user_agent = "\\x48\\124\\x54\\120\\x5f\\125\\x53\\105\\x52\\137\\x41\\107\\x45\\116\\x54" nocase
-
-    condition:
-        any of them
 }
 
 rule Websites
@@ -375,6 +369,7 @@ strings:
         $string17 = "$qV[4].$qV[3].$qV[2].$qV[0].$qV[1]"
         $string18 = "$xsser=base64_decode($_POST"
         $string19 = "preg_replace('/(.*)/e', @$_POST["
+        $string20 = "eval(\"?>\".base64_decode("
 condition:
 	not $mz at 0 and $php and any of ($string*)
 }
