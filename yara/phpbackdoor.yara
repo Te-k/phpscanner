@@ -151,6 +151,8 @@ rule sosyete {
 rule phpobfuscator {
     meta:
         description = "rule for different php obfuscators"
+        url = "https://github.com/Te-k/php-malicious-sample/blob/master/full-width.php"
+        author = "@tenacioustek"
 
     strings:
         $a = "$O10I0I01O1OI01OIOI"
@@ -164,9 +166,22 @@ rule phpobfuscator {
         $i = "_$(edoced_46esab"
         $j = "str_rot13(chr(113).\"rsva\""
         $k = "\"b\".\"\".\"as\".\"e\".\"\".\"\".\"6\".\"4\".\"_\".\"de\".\"\".\"c\".\"o\".\"\".\"d\".\"e\""
+        $l = "\"b\".\"\".\"as\".\"e\".\"\".\"\".\"6\".\"4\".\"_\".\"de\".\"\".\"c\".\"o\". \"\".\"d\".\"e\""
+        $m = ";global$auth;function sh_decrypt_phase($data,$key)"
+        $n = /\$GLOBALS\['[\w\d]+'\];global\$[\w\d]+;\$[\w\d]+=\$GLOBALS;\$[\w\d]+\['[\w\d]+'\]=/
 
     condition:
         any of them
+}
+
+rule phpobfuscator_global {
+    meta:
+        description = "detect obfuscation using $GLOBAL"
+
+    strings:
+        $global = "$GLOBALS["
+    condition:
+        #global > 30
 }
 
 rule wso {
@@ -436,6 +451,33 @@ rule phpmailer {
         $h = "uplod Sucess By w4l3XzY3"
         $i = "B L E S S E D S I N N E R"
         $j = "BlesseD MAILER 2014"
+
+    condition:
+        any of them
+}
+
+rule phpuploader {
+    meta:
+        author = "@tenacioustek"
+        description = "rule for several php uploader"
+    strings:
+        $a0 = "if(isset($_POST['Submit'])){"
+        $a1 = "$userfile_name = $_FILES['image']['name']"
+        $a2 = "$abod = $filedir.$userfile_name"
+    condition:
+        all of them
+}
+
+rule phpshell1 {
+    meta:
+        author = "@tenacioustek"
+        url = "https://github.com/Te-k/php-malicious-sample/blob/master/Rss.php"
+
+    strings:
+        $a = "I_have_problem_with_Curl"
+        $b = "I_have_problem_with_base64_decode"
+        $c = "str_ireplace(\"ADMINTASKHERE\""
+        $d = "str_ireplace(urldecode(\"%5BSERVERURLHERE%5D\")"
 
     condition:
         any of them
