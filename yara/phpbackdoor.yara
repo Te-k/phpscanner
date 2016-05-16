@@ -163,6 +163,7 @@ rule phpobfuscator {
         $h = "$O0__O00O_O"
         $i = "_$(edoced_46esab"
         $j = "str_rot13(chr(113).\"rsva\""
+        $k = "\"b\".\"\".\"as\".\"e\".\"\".\"\".\"6\".\"4\".\"_\".\"de\".\"\".\"c\".\"o\".\"\".\"d\".\"e\""
 
     condition:
         any of them
@@ -182,7 +183,6 @@ rule wso {
         $e = "WSO_VERSION"
         $f = "<h1>Suicide</h1><div class=content>Really want to remove the shell?"
         $g = "CREATE TABLE wso2(file text);"
-        $h = "21232f297a57a5a743894a0e4a801fc3"
 
     condition:
         any of them
@@ -200,6 +200,19 @@ rule koplak {
     condition:
         any of them
 
+}
+
+rule darkshell {
+    meta:
+        author = "@tenacioustek"
+        description= "Darkshell"
+
+    strings:
+        $a = "<center><h1>Dark Shell</h1></center><p><hr><p>"
+        $b = "$current = htmlentities ($_SERVER ['PHP_SELF'] . \"?dir=\" . $dir)"
+
+    condition:
+        any of them
 }
 
 rule webshell_functions {
@@ -342,27 +355,27 @@ condition:
 
 rule misc_php_backdoor
 {
-meta:
-	author = "@patrickrolsen"
-	version = "0.4"
-	data = "12/29/2013"
-	reference = "Virus Total Downloading PHP files and reviewing them..."
-strings:
-	$mz = { 4d 5a } // MZ
-	$php = "<?php"
-	$string1 = "eval(gzinflate(str_rot13(base64_decode("
-	$string2 = "eval(base64_decode("
-	$string3 = "eval(gzinflate(base64_decode("
-	$string4 = "cmd.exe /c"
-	$string5 = "eva1"
-	$string6 = "urldecode(stripslashes("
-	$string7 = "preg_replace(\"/.*/e\",\"\\x"
-	$string8 = "<?php echo \"<script>"
-	$string9 = "'o'.'w'.'s'" // 'Wi'.'nd'.'o'.'w'.'s'
-	$string10 = "preg_replace(\"/.*/\".'e',chr"
-	$string11 = "exp1ode"
-	$string12 = "cmdexec(\"killall ping;"
-	$string13 = "r57shell.php"
+    meta:
+        author = "@patrickrolsen"
+        version = "0.4"
+        data = "12/29/2013"
+        reference = "Virus Total Downloading PHP files and reviewing them..."
+    strings:
+        $mz = { 4d 5a } // MZ
+        $php = "<?php"
+        $string1 = "eval(gzinflate(str_rot13(base64_decode("
+        $string2 = "eval(base64_decode("
+        $string3 = "eval(gzinflate(base64_decode("
+        $string4 = "cmd.exe /c"
+        $string5 = "eva1"
+        $string6 = "urldecode(stripslashes("
+        $string7 = "preg_replace(\"/.*/e\",\"\\x"
+        $string8 = "<?php echo \"<script>"
+        $string9 = "'o'.'w'.'s'" // 'Wi'.'nd'.'o'.'w'.'s'
+        $string10 = "preg_replace(\"/.*/\".'e',chr"
+        $string11 = "exp1ode"
+        $string12 = "cmdexec(\"killall ping;"
+        $string13 = "r57shell.php"
         $string14 = "eval(\"?>\".gzuncompress(base64_decode("
         $string15 = /eval\(\$_POST\[[a-zA-Z0-9]+\]\)/
         $string16 = "tistittirti_rtietipltiatice"
@@ -370,8 +383,11 @@ strings:
         $string18 = "$xsser=base64_decode($_POST"
         $string19 = "preg_replace('/(.*)/e', @$_POST["
         $string20 = "eval(\"?>\".base64_decode("
-condition:
-	not $mz at 0 and $php and any of ($string*)
+        $string21 = "$k=\"ass\".\"ert\"; $k(${\"_PO\".\"ST\"}"
+        $string22 = "eval(\"return eval("
+        $string23 = "preg_replace('/ad/e','@'.str_rot13("
+    condition:
+        not $mz at 0 and $php and any of ($string*)
 }
 
 rule pseudo_darkleech {
@@ -424,5 +440,3 @@ rule phpmailer {
     condition:
         any of them
 }
-
-

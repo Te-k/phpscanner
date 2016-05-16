@@ -4,7 +4,8 @@ import argparse
 import os
 
 YARA_FILES = [
-        "yara/phpbackdoor.yar",
+        "yara/phpbackdoor.yara",
+        "yara/clamavphp.yara"
 ]
 
 def check_file(path, rules):
@@ -14,7 +15,7 @@ def check_file(path, rules):
         res += rule.match(path)
 
     if len(res) > 0:
-        print('%s: %s' % (path, ", ".join(map(lambda x:x.rule, res))))
+        print('%s -> %s' % (path, ", ".join(map(lambda x:x.rule, res))))
     return res
 
 if __name__ == '__main__':
@@ -27,8 +28,8 @@ if __name__ == '__main__':
 
     # Compile rules
     if args.suspicious:
-        YARA_FILES.append('yara/suspicious.yar')
-        YARA_FILES.append('yara/phpsuspicious.yar')
+        YARA_FILES.append('yara/suspicious.yara')
+        YARA_FILES.append('yara/phpsuspicious.yara')
     rules = []
     for f in YARA_FILES:
         rules.append(yara.compile(
