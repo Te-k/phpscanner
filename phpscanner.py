@@ -9,24 +9,8 @@ import sys
 from phpmalwarescanner import is_hacked
 from collections import Counter
 
-class PhpScanner:
-    def __init__(self, signature=True, pms=True, hashes=True, suspicious=False, verbosity=0):
-        self.yara_files  = [
-            "yara/phpbackdoor.yara",
-            "yara/clamavphp.yara"
-        ]
-        self.suspicious = suspicious
-        self.verbosity = verbosity
-        if suspicious:
-            self.yara_files.extend(['yara/suspicious.yara', 'yara/phpsuspicious.yara'])
-            self.pms_score = 5
-        else:
-            self.pms_score = 10
-        self.rules = []
-        for f in self.yara_files:
-            self.rules.append(yara.compile(
-                os.path.join(os.path.dirname(os.path.realpath(__file__)), f)
-            ))
+class PhpAnalyzer(object):
+    def __init__(self):
         self.hashdb = json.load(open(
             os.path.join(os.path.dirname(os.path.realpath(__file__)), 'md5ref.json')
         ))
@@ -38,13 +22,6 @@ class PhpScanner:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
-
-    def check_file_signature(self, path):
-        """Check Yara signatures provided on the file"""
-        res = []
-        for rule in self.rules:
-            res += rule.match(path)
-        return res
 
     def check_known_hash(self, path):
         """Compare the file with a known database"""
@@ -62,6 +39,35 @@ class PhpScanner:
                     pass
 
         return known, suspicious, []
+
+class PhpScanner(PhpAnalyzer):
+    def __init__(self, signature=True, pms=True, hashes=True, suspicious=False, verbosity=0):
+        super(PhpScanner, self).__init__()
+        self.yara_files  = [
+            "yara/phpbackdoor.yara",
+            "yara/clamavphp.yara"
+        ]
+        self.suspicious = suspicious
+        self.verbosity = verbosity
+        if suspicious:
+            self.yara_files.extend(['yara/suspicious.yara', 'yara/phpsuspicious.yara'])
+            self.pms_score = 5
+        else:
+            self.pms_score = 10
+        self.rules = []
+        for f in self.yara_files:
+            self.rules.append(yara.compile(
+                os.path.join(os.path.dirname(os.path.realpath(__file__)), f)
+            ))
+
+
+    def check_file_signature(self, path):
+        """Check Yara signatures provided on the file"""
+        res = []
+        for rule in self.rules:
+            res += rule.match(path)
+        return res
+
 
     def check_file(self, path):
         """Check files with all means possible"""
@@ -89,24 +95,25 @@ class PhpScanner:
             if self.verbosity > 3:
                 print('%s : CLEAN' % path)
 
+class Fingerprinter(PhpAnalyzer):
+    def do(self, path):
+        """Fingerprint the framework of the given directory"""
+        versions = []
+        for root, dirs, files in os.walk(path):
+            for name in files:
+                if name.endswith(".php"):
+                    path = os.path.join(root, name)
+                    known, suspicious, v = self.check_known_hash(path)
+                    if known and not suspicious:
+                        versions.extend(v)
+        result = Counter(versions)
+        return result.most_common()[:5]
 
-def fingerprint_framework(db, path):
-    """Fingerprint the framework of the given directory"""
-    versions = []
-    for root, dirs, files in os.walk(path):
-        for name in files:
-            if name.endswith(".php"):
-                path = os.path.join(root, name)
-                known, suspicious, v = check_known_hash(hashdb, path)
-                if known and not suspicious:
-                    versions.extend(v)
-    result = Counter(versions)
-    return result.most_common()[:5]
-
-
-
-
-
+    def go(self, path):
+        """Fingerprint and print result"""
+        versions = self.do(path)
+        print("Seems to be %s (%i files)" % (versions[0]))
+        print("Can also be " + ", ".join(map(lambda x: "%s (%i)" % x, versions[1:])))
 
 
 if __name__ == '__main__':
@@ -128,13 +135,16 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    scanner = PhpScanner(
+    if args.fingerprint:
+        fingerprinter = Fingerprinter()
+    else:
+        scanner = PhpScanner(
             args.signature,
             args.pms,
             args.hash,
             args.suspicious,
             args.verbose
-    )
+        )
 
 
     # Browse directories
@@ -143,12 +153,10 @@ if __name__ == '__main__':
             if args.fingerprint:
                 print("Impossible de fingerprint a file")
             else:
-                check_file(target, rules, hashdb, pms_score, args.verbose)
+                scanner.check_file(target)
         elif os.path.isdir(target):
             if args.fingerprint:
-                versions = fingerprint_framework(hashdb, target)
-                print("Seems to be %s (%i files)" % (versions[0]))
-                print("Can also be " + ", ".join(map(lambda x: "%s (%i)" % x, versions[1:])))
+                fingerprinter.go(target)
             else:
                 for root, dirs, files in os.walk(target):
                     for name in files:
