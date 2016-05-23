@@ -5,14 +5,17 @@ import os
 import fnmatch
 import json
 import hashlib
-import sys
 from phpmalwarescanner import is_hacked
 from collections import Counter
+
 
 class PhpAnalyzer(object):
     def __init__(self):
         self.hashdb = json.load(open(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), 'md5ref.json')
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                'md5ref.json'
+            )
         ))
 
     def _md5_file(self, path):
@@ -27,7 +30,6 @@ class PhpAnalyzer(object):
         """Compare the file with a known database"""
         known = False
         suspicious = False
-        alllabels = []
         md5 = self._md5_file(path)
         for fn in self.hashdb.keys():
             if fn in path:
@@ -40,17 +42,23 @@ class PhpAnalyzer(object):
 
         return known, suspicious, []
 
+
 class PhpScanner(PhpAnalyzer):
-    def __init__(self, signature=True, pms=True, hashes=True, suspicious=False, verbosity=0):
+    def __init__(
+            self, signature=True, pms=True, hashes=True,
+            suspicious=False, verbosity=0
+            ):
         super(PhpScanner, self).__init__()
-        self.yara_files  = [
+        self.yara_files = [
             "yara/phpbackdoor.yara",
             "yara/clamavphp.yara"
         ]
         self.suspicious = suspicious
         self.verbosity = verbosity
         if suspicious:
-            self.yara_files.extend(['yara/suspicious.yara', 'yara/phpsuspicious.yara'])
+            self.yara_files.extend(
+                    ['yara/suspicious.yara', 'yara/phpsuspicious.yara']
+            )
             self.pms_score = 5
         else:
             self.pms_score = 10
@@ -60,7 +68,6 @@ class PhpScanner(PhpAnalyzer):
                 os.path.join(os.path.dirname(os.path.realpath(__file__)), f)
             ))
 
-
     def check_file_signature(self, path):
         """Check Yara signatures provided on the file"""
         res = []
@@ -68,10 +75,9 @@ class PhpScanner(PhpAnalyzer):
             res += rule.match(path)
         return res
 
-
     def check_file(self, path):
         """Check files with all means possible"""
-        #For each file, make all the tests
+        # For each file, make all the tests
         sigs = self.check_file_signature(path)
         knownhash = self.check_known_hash(path)
         if fnmatch.fnmatch(path, '*.php') or fnmatch.fnmatch(path, '*.js'):
@@ -81,12 +87,12 @@ class PhpScanner(PhpAnalyzer):
         if len(sigs) > 0 or pms['score'] > self.pms_score or (knownhash[0] and knownhash[1]):
             reason = ""
             if len(sigs) > 0:
-                reason += '[SIGNATURE (' +", ".join(map(lambda x:x.rule, sigs)) + ')] '
+                reason += '[SIGNATURE (' + ", ".join(map(lambda x: x.rule, sigs)) + ')] '
             if pms['score'] > self.pms_score:
                 if self.verbosity == 0:
                     reason += "[PMS] "
                 else:
-                    reason += "[PMS (score: %i, %s)] " % (pms['score'], ', '.join(map(lambda x:x['rule'], pms['details'])))
+                    reason += "[PMS (score: %i, %s)] " % (pms['score'], ', '.join(map(lambda x: x['rule'], pms['details'])))
             if knownhash[0] and knownhash[1]:
                 reason += "[HASH]"
 
@@ -94,6 +100,7 @@ class PhpScanner(PhpAnalyzer):
         else:
             if self.verbosity > 3:
                 print('%s : CLEAN' % path)
+
 
 class Fingerprinter(PhpAnalyzer):
     def do(self, path):
@@ -146,7 +153,6 @@ if __name__ == '__main__':
             args.verbose
         )
 
-
     # Browse directories
     for target in args.FILE:
         if os.path.isfile(target):
@@ -161,5 +167,3 @@ if __name__ == '__main__':
                 for root, dirs, files in os.walk(target):
                     for name in files:
                         scanner.check_file(os.path.join(root, name))
-
-
