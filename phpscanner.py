@@ -83,6 +83,8 @@ class PhpScanner(PhpAnalyzer):
                 res += rule.match(path)
             except yara.Error:
                 pass
+            except UnicodeEncodeError:
+                pass
         return res
 
     def check_file(self, path):
@@ -132,6 +134,7 @@ class PhpScanner(PhpAnalyzer):
     def scan_file(self, path, display=True):
         """Scan files with all means possible"""
         # For each file, make all the tests
+        path = path.decode('utf-8')
         res = self.check_file(path)
         if display:
             self.print_results(path, res)
