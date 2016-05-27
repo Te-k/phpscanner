@@ -55,6 +55,9 @@ class PhpScanner(PhpAnalyzer):
         ]
         self.suspicious = suspicious
         self.verbosity = verbosity
+        self.signature = signature
+        self.pms = pms
+        self.hashes = hashes
         if suspicious:
             self.yara_files.extend(
                     ['yara/suspicious.yara', 'yara/phpsuspicious.yara']
@@ -76,30 +79,56 @@ class PhpScanner(PhpAnalyzer):
         return res
 
     def check_file(self, path):
-        """Check files with all means possible"""
-        # For each file, make all the tests
-        sigs = self.check_file_signature(path)
-        knownhash = self.check_known_hash(path)
-        if fnmatch.fnmatch(path, '*.php') or fnmatch.fnmatch(path, '*.js'):
-            pms = is_hacked(path)
-        else:
-            pms = {'score': -10}
-        if len(sigs) > 0 or pms['score'] > self.pms_score or (knownhash[0] and knownhash[1]):
-            reason = ""
+        """Check file with means selected"""
+        results = {'suspicious': False}
+        if self.signature:
+            sigs = self.check_file_signature(path)
             if len(sigs) > 0:
-                reason += '[SIGNATURE (' + ", ".join(map(lambda x: x.rule, sigs)) + ')] '
-            if pms['score'] > self.pms_score:
+                results['suspicious'] = True
+                results['signatures'] = sigs
+        if self.pms:
+            if fnmatch.fnmatch(path, '*.php') or fnmatch.fnmatch(path, '*.js'):
+                pms = is_hacked(path)
+                if pms['score'] > self.pms_score:
+                    results['suspicious'] = True
+                    results['pms'] = pms
+        if self.hashes:
+            knownhash = self.check_known_hash(path)
+            if knownhash[0] and knownhash[1]:
+                results['suspicious'] = True
+                results['hash'] = 'BAD'
+
+        return results
+
+    def print_results(self, path, results):
+        """Display results"""
+        if results['suspicious']:
+            reason = ""
+            if 'signatures' in results.keys():
+                reason += '[SIGNATURE (' + ", ".join(map(
+                    lambda x: x.rule,
+                    results['signatures']
+                    )) + ')] '
+            if 'pms' in results.keys():
                 if self.verbosity == 0:
                     reason += "[PMS] "
                 else:
-                    reason += "[PMS (score: %i, %s)] " % (pms['score'], ', '.join(map(lambda x: x['rule'], pms['details'])))
-            if knownhash[0] and knownhash[1]:
+                    reason += "[PMS (score: %i, %s)] " % (results['pms']['score'], ', '.join(map(lambda x: x['rule'], results['pms']['details'])))
+            if 'hash' in results.keys():
                 reason += "[HASH]"
 
             print('%s -> %s' % (path, reason))
         else:
             if self.verbosity > 3:
                 print('%s : CLEAN' % path)
+
+    def scan_file(self, path, display=True):
+        """Scan files with all means possible"""
+        # For each file, make all the tests
+        res = self.check_file(path)
+        if display:
+            self.print_results(path, res)
+        return res
 
 
 class Fingerprinter(PhpAnalyzer):
@@ -125,33 +154,49 @@ class Fingerprinter(PhpAnalyzer):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Look for malicious php')
-    parser.add_argument('FILE', nargs='+',
-                            help='List of files or directories to be analyzed')
-    parser.add_argument('-s', '--suspicious', action='store_true',
-                help="Add rules for suspicious files (more FP)")
-    parser.add_argument('-O', '--fingerprint', action='store_true',
-                help="Fingerprint the framework version")
-    parser.add_argument('-v', '--verbose', action="count", default=0,
+    parser.add_argument(
+            'FILE', nargs='+',
+            help='List of files or directories to be analyzed')
+    parser.add_argument(
+            '-s', '--suspicious', action='store_true',
+            help="Add rules for suspicious files (more FP)")
+    parser.add_argument(
+            '-O', '--fingerprint', action='store_true',
+            help="Fingerprint the framework version")
+    parser.add_argument(
+            '-v', '--verbose', action="count", default=0,
             help="verbose level... repeat up to three times.")
-    parser.add_argument('-1', '--signature', action='store_true',
-                help="Uses only the signatures")
-    parser.add_argument('-2', '--pms', action='store_true',
-                help="Uses only the Php Malware Scanner tool")
-    parser.add_argument('-3', '--hash', action='store_true',
-                help="Uses only the hash comparison")
+    parser.add_argument(
+            '-1', '--signature', action='store_true',
+            help="Uses only the signatures")
+    parser.add_argument(
+            '-2', '--pms', action='store_true',
+            help="Uses only the Php Malware Scanner tool")
+    parser.add_argument(
+            '-3', '--hash', action='store_true',
+            help="Uses only the hash comparison")
 
     args = parser.parse_args()
 
     if args.fingerprint:
         fingerprinter = Fingerprinter()
     else:
-        scanner = PhpScanner(
-            args.signature,
-            args.pms,
-            args.hash,
-            args.suspicious,
-            args.verbose
-        )
+        if not args.signature and not args.pms and not args.hash:
+            scanner = PhpScanner(
+                True,
+                True,
+                True,
+                args.suspicious,
+                args.verbose
+            )
+        else:
+            scanner = PhpScanner(
+                args.signature,
+                args.pms,
+                args.hash,
+                args.suspicious,
+                args.verbose
+            )
 
     # Browse directories
     for target in args.FILE:
@@ -159,11 +204,11 @@ if __name__ == '__main__':
             if args.fingerprint:
                 print("Impossible de fingerprint a file")
             else:
-                scanner.check_file(target)
+                scanner.scan_file(target)
         elif os.path.isdir(target):
             if args.fingerprint:
                 fingerprinter.go(target)
             else:
                 for root, dirs, files in os.walk(target):
                     for name in files:
-                        scanner.check_file(os.path.join(root, name))
+                        scanner.scan_file(os.path.join(root, name))
