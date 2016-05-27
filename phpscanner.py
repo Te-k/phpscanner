@@ -212,25 +212,29 @@ if __name__ == '__main__':
     start_time = time.time()
 
     # Browse directories
-    for target in args.FILE:
-        if os.path.isfile(target):
-            if args.fingerprint:
-                print("Impossible de fingerprint a file")
-            else:
-                scanner.scan_file(target)
-        elif os.path.isdir(target):
-            if args.fingerprint:
-                fingerprinter.go(target)
-            else:
-                for root, dirs, files in os.walk(target):
-                    for name in files:
-                        res = scanner.scan_file(os.path.join(root, name))
-                        if res['suspicious']:
-                            suspicious_files += 1
-                        scanned_files += 1
+    try:
+        for target in args.FILE:
+            if os.path.isfile(target):
+                if args.fingerprint:
+                    print("Impossible de fingerprint a file")
+                else:
+                    scanner.scan_file(target)
+            elif os.path.isdir(target):
+                if args.fingerprint:
+                    fingerprinter.go(target)
+                else:
+                    for root, dirs, files in os.walk(target):
+                        for name in files:
+                            res = scanner.scan_file(os.path.join(root, name))
+                            if res['suspicious']:
+                                suspicious_files += 1
+                            scanned_files += 1
 
-                if not args.quiet:
-                    print("--------------------------------------------")
-                    print("%i files scanned" % scanned_files)
-                    print("%i suspicious files found" % suspicious_files)
-                    print("Execution time: %s seconds" % (time.time() - start_time))
+                    if not args.quiet:
+                        print("--------------------------------------------")
+                        print("%i files scanned" % scanned_files)
+                        print("%i suspicious files found" % suspicious_files)
+                        print("Execution time: %s seconds" % (time.time() - start_time))
+
+    except KeyboardInterrupt:
+        print("Whoooo, ok, I quit...")
