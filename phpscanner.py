@@ -5,6 +5,7 @@ import os
 import fnmatch
 import json
 import hashlib
+import time
 from phpmalwarescanner import is_hacked
 from collections import Counter
 
@@ -30,15 +31,18 @@ class PhpAnalyzer(object):
         """Compare the file with a known database"""
         known = False
         suspicious = False
-        md5 = self._md5_file(path)
-        for fn in self.hashdb.keys():
-            if fn in path:
-                known = True
-                suspicious = True
-                try:
-                    return True, False, self.hashdb[fn][md5]
-                except KeyError:
-                    pass
+        try:
+            md5 = self._md5_file(path)
+            for fn in self.hashdb.keys():
+                if fn in path:
+                    known = True
+                    suspicious = True
+                    try:
+                        return True, False, self.hashdb[fn][md5]
+                    except KeyError:
+                        pass
+        except IOError:
+            pass
 
         return known, suspicious, []
 
@@ -75,7 +79,10 @@ class PhpScanner(PhpAnalyzer):
         """Check Yara signatures provided on the file"""
         res = []
         for rule in self.rules:
-            res += rule.match(path)
+            try:
+                res += rule.match(path)
+            except yara.Error:
+                pass
         return res
 
     def check_file(self, path):
@@ -175,6 +182,9 @@ if __name__ == '__main__':
     parser.add_argument(
             '-3', '--hash', action='store_true',
             help="Uses only the hash comparison")
+    parser.add_argument(
+            '-q', '--quiet', action='store_true',
+            help="Hide scan summary")
 
     args = parser.parse_args()
 
@@ -197,6 +207,9 @@ if __name__ == '__main__':
                 args.suspicious,
                 args.verbose
             )
+    suspicious_files = 0
+    scanned_files = 0
+    start_time = time.time()
 
     # Browse directories
     for target in args.FILE:
@@ -211,4 +224,13 @@ if __name__ == '__main__':
             else:
                 for root, dirs, files in os.walk(target):
                     for name in files:
-                        scanner.scan_file(os.path.join(root, name))
+                        res = scanner.scan_file(os.path.join(root, name))
+                        if res['suspicious']:
+                            suspicious_files += 1
+                        scanned_files += 1
+
+                if not args.quiet:
+                    print("--------------------------------------------")
+                    print("%i files scanned" % scanned_files)
+                    print("%i suspicious files found" % suspicious_files)
+                    print("Execution time: %s seconds" % (time.time() - start_time))
