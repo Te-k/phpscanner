@@ -63,7 +63,7 @@ Can also be DRUPAL7.18 (115), DRUPAL7.19 (115), DRUPAL7.21 (115), DRUPAL7.20 (11
 
 Last CMS versions included are:
 * Wordpress 4.5.2
-* Drupal 9.x-dev
+* Drupal 8.x-dev
 * Joomla 3.6 alpha
 
 #### Licence
